@@ -1,0 +1,11 @@
+numpy
+scipy
+matplotlib
+pandas
+qiskit
+pennylane
+ipython
+jupyter
+nbformat
+nbclient
+
