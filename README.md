@@ -69,7 +69,7 @@ Para ejecutar los notebooks y guardar copias ejecutadas:
 python run_all.py
 ```
 
-Por indicación del flujo de trabajo actual, `run_all.py` **omite las celdas VQE** etiquetadas como `skip-vqe`. Esto permite reproducir Trotter, diagonalización exacta, barridos no variacionales, tablas y gráficas sin lanzar optimizaciones VQE largas. El código VQE queda escrito en los notebooks fuente para ejecutarse manualmente.
+Por indicación del flujo de trabajo actual, `run_all.py` **omite las celdas VQE** etiquetadas como `skip-vqe`. Esto permite reproducir Trotter, diagonalización exacta, barridos no variacionales, tablas y gráficas sin lanzar optimizaciones VQE largas. El código VQE queda escrito en los notebooks fuente para ejecutarse manualmente en el interior del Notebook.
 
 Las copias ejecutadas se guardan en:
 
