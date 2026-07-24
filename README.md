@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/quetzal_quantum_logo.jpeg" alt="Quetzal Quantum logo" width="420">
+</p>
+
 # Challenge 3: Simulación de materiales para dispositivos de energía de próxima generación
 
 Repositorio preparado para el **Track 3 / Challenge 3 del Quantathon CR 2026**. El reto consiste en simular materiales cuánticos que podrían ser relevantes para energía del futuro, como superconductores, baterías y catalizadores.
