@@ -18,6 +18,10 @@ ODS: **7, 9, 12 y 13**. La conexión física es que una mejor simulación de mat
 - Mariana Elizabeth Perez
 - Natalia Amortegui Castaño
 
+## Informe técnico
+
+El informe técnico en PDF se encuentra en [`reports/informe_tecnico_track_3.pdf`](reports/informe_tecnico_track_3.pdf). Esta versión se incluye como borrador incompleto y queda pendiente de cierre editorial.
+
 ## Estructura del repositorio
 
 ```text
@@ -40,6 +44,7 @@ Track3_Simulacion_Materiales/
 │  └─ toolkit_statement.md
 ├─ reports/
 │  ├─ informe_tecnico_borrador.md
+│  ├─ informe_tecnico_track_3.pdf
 │  └─ presentacion_5min_outline.md
 └─ figures/
    └─ README.md
