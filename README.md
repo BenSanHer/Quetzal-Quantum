@@ -10,6 +10,14 @@ El núcleo de la entrega es el **Modelo de Ising de Campo Transverso (TFIM)**. C
 
 ODS: **7, 9, 12 y 13**. La conexión física es que una mejor simulación de materiales puede apoyar energía más limpia, almacenamiento más eficiente, infraestructura científica y menor huella de carbono.
 
+## Integrantes
+
+- Benjamín Sánchez Hernández
+- Arantxa Camil Junco Flores
+- Amado Alberto Cabrera Estrada
+- Mariana Elizabeth Perez
+- Natalia Amortegui Castaño
+
 ## Estructura del repositorio
 
 ```text
