@@ -20,7 +20,7 @@ ODS: **7, 9, 12 y 13**. La conexión física es que una mejor simulación de mat
 
 ## Informe técnico
 
-El informe técnico en PDF se encuentra en [`reports/informe_tecnico_track_3.pdf`](reports/informe_tecnico_track_3.pdf). Esta versión se incluye como borrador incompleto y queda pendiente de cierre editorial.
+El informe técnico final en PDF se encuentra en [`reports/informe_tecnico_track_3.pdf`](reports/informe_tecnico_track_3.pdf).
 
 ## Estructura del repositorio
 
@@ -168,9 +168,8 @@ Resultados de referencia:
 - Los VQE están escritos, pero `run_all.py` no los ejecuta por defecto.
 - La transición en $h/J=1$ está redondeada por tamaño finito.
 
-## Entrega pendiente
+## Pendiente adicional
 
-- Convertir el borrador de informe técnico en PDF de máximo 8 páginas.
 - Preparar la presentación de 5 minutos.
 - Si se desea competir con stack Quantinuum estricto, migrar la ejecución final a Pytket y/o Guppy y correr en emulador H2.
 
