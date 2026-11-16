@@ -1,0 +1,23 @@
+{
+  "campos": [
+    1.6,
+    1.8,
+    2.0
+  ],
+  "semillas": [
+    3,
+    42
+  ],
+  "n_qubits": 6,
+  "J": 1.0,
+  "n_layers": 3,
+  "learning_rate": 0.03,
+  "max_steps": 1600,
+  "tol": 1e-09,
+  "patience": 25,
+  "peso_paridad": 1.0,
+  "paridad_objetivo": 1,
+  "inicializacion": "mismas semillas, desde el inicio",
+  "primeros_800_pasos_verificados": true,
+  "tiempo_total_s": 1038.5650507999999
+}

@@ -1,0 +1,26 @@
+{
+  "campos": [
+    1.0,
+    1.2,
+    1.4,
+    1.6,
+    1.8,
+    2.0
+  ],
+  "origen": "parámetros guardados de la prueba 0.6 a 0.8",
+  "n_qubits": 6,
+  "J": 1.0,
+  "n_layers": 3,
+  "learning_rate": 0.03,
+  "tamano_bloque": 100,
+  "max_steps_por_campo": 800,
+  "fidelidad_objetivo": 0.99,
+  "comparacion_fidelidad": "mayor estricto",
+  "tolerancia_fidelidad": 0.0001,
+  "tolerancia_costo_medio": 0.0001,
+  "bloques_estables_requeridos": 2,
+  "mismo_adam_entre_bloques": true,
+  "nuevo_adam_entre_campos": true,
+  "avanzar_tras_estancamiento": true,
+  "tiempo_total_s": 187.32509489999939
+}

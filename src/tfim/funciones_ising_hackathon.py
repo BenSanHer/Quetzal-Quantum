@@ -728,8 +728,22 @@ def vqe_ising(
     calcular_exacto: bool = True,
     parametros_iniciales=None,
     verbose: bool = True,
+    paridad_objetivo: int = 1,
+    peso_paridad: float = 1.0,
+    tamano_bloque: int = 100,
+    callback_bloque=None,
 ):
-    """Ejecuta un VQE del TFIM con ADAM y simulación exacta sin shots."""
+    """Minimiza <H> + peso_paridad * (1 - paridad_objetivo * <P>) / 2.
+
+    P es el producto de X en todos los espines. La energía física y su
+    historial se reportan separados del costo penalizado. Un peso cero
+    permite recuperar la optimización basada únicamente en energía.
+
+    Si se proporciona callback_bloque, recibe los datos del entrenamiento
+    cada tamano_bloque pasos y puede devolver el motivo para detenerlo.
+    El mismo Adam continúa entre bloques. En ese modo el callback sustituye
+    la parada por tolerancia; se mantiene max_steps como límite.
+    """
     qml, pnp = _dependencias_vqe()
 
     if n_qubits < 2:
@@ -738,18 +752,36 @@ def vqe_ising(
         raise ValueError("n_layers debe ser al menos 1.")
     if learning_rate <= 0:
         raise ValueError("learning_rate debe ser positivo.")
+    if paridad_objetivo not in (-1, 1):
+        raise ValueError("paridad_objetivo debe ser +1 o -1.")
+    if not np.isfinite(peso_paridad) or peso_paridad < 0:
+        raise ValueError("peso_paridad debe ser finito y no negativo.")
+    if not isinstance(tamano_bloque, (int, np.integer)) or tamano_bloque < 1:
+        raise ValueError("tamano_bloque debe ser un entero positivo.")
+    if callback_bloque is not None and not callable(callback_bloque):
+        raise TypeError("callback_bloque debe ser invocable.")
 
     H = hamiltoniano_ising_pennylane(
         n_qubits=n_qubits,
         J=J,
         h=h,
     )
+    P = qml.prod(*(qml.PauliX(i) for i in range(n_qubits)))
     dev = qml.device("default.qubit", wires=n_qubits, shots=None)
 
     @qml.qnode(dev, interface="autograd", diff_method="best")
     def circuito_energia(parametros):
         ansatz_ising(parametros, n_qubits=n_qubits, n_layers=n_layers)
         return qml.expval(H)
+
+    @qml.qnode(dev, interface="autograd", diff_method="best")
+    def circuito_observables(parametros):
+        ansatz_ising(parametros, n_qubits=n_qubits, n_layers=n_layers)
+        return qml.expval(H), qml.expval(P)
+
+    def circuito_costo(parametros):
+        energia, paridad = circuito_observables(parametros)
+        return energia + peso_paridad * (1 - paridad_objetivo * paridad) / 2
 
     @qml.qnode(dev, interface="autograd", diff_method="best")
     def circuito_estado(parametros):
@@ -773,41 +805,88 @@ def vqe_ising(
         )
     optimizador = qml.AdamOptimizer(stepsize=learning_rate)
 
-    historial = [float(circuito_energia(parametros))]
+    energia_inicial, paridad_inicial = map(float, circuito_observables(parametros))
+    historial = [energia_inicial]
+    historial_paridad = [paridad_inicial]
+    historial_costo = [
+        energia_inicial + peso_paridad * (1 - paridad_objetivo * paridad_inicial) / 2
+    ]
     pasos_estables = 0
+    motivo_parada = "limite_pasos"
 
     if verbose:
-        print(f"Energía inicial: {historial[0]:.12f}")
+        print(
+            f"Semilla {seed} | Energía inicial: {historial[0]:.12f} | "
+            f"Costo inicial: {historial_costo[0]:.12f}"
+        )
 
     for step in range(1, max_steps + 1):
-        parametros = optimizador.step(circuito_energia, parametros)
-        energia_actual = float(circuito_energia(parametros))
+        parametros = optimizador.step(circuito_costo, parametros)
+        energia_actual, paridad_actual = map(float, circuito_observables(parametros))
+        costo_actual = (
+            energia_actual + peso_paridad * (1 - paridad_objetivo * paridad_actual) / 2
+        )
         historial.append(energia_actual)
-        diferencia = abs(historial[-1] - historial[-2])
+        historial_paridad.append(paridad_actual)
+        historial_costo.append(costo_actual)
+        diferencia = abs(historial_costo[-1] - historial_costo[-2])
 
         if verbose and (step % mostrar_cada == 0 or step == 1):
             print(
                 f"Paso {step:4d} | "
                 f"E = {energia_actual:.12f} | "
-                f"ΔE = {diferencia:.3e}"
+                f"L = {costo_actual:.12f} | "
+                f"<P> = {paridad_actual:.6f} | "
+                f"ΔL = {diferencia:.3e}"
             )
 
         pasos_estables = pasos_estables + 1 if diferencia < tol else 0
-        if pasos_estables >= patience:
+        if callback_bloque is not None and (
+            step % tamano_bloque == 0 or step == max_steps
+        ):
+            motivo_callback = callback_bloque({
+                "paso": step,
+                "parametros": parametros,
+                "estado": np.asarray(circuito_estado(parametros)),
+                "energia": energia_actual,
+                "paridad": paridad_actual,
+                "costo": costo_actual,
+                "historial": np.asarray(historial),
+                "historial_costo": np.asarray(historial_costo),
+                "historial_paridad": np.asarray(historial_paridad),
+            })
+            if motivo_callback:
+                motivo_parada = str(motivo_callback)
+                if verbose:
+                    print(f"Parada en el paso {step}: {motivo_parada}.")
+                break
+        if callback_bloque is None and pasos_estables >= patience:
+            motivo_parada = "tolerancia"
             if verbose:
                 print(f"\nConvergencia alcanzada en el paso {step}.")
             break
 
-    energia_vqe = float(circuito_energia(parametros))
+    energia_vqe = historial[-1]
     resultado = {
         "energia_vqe": energia_vqe,
+        "costo_vqe": historial_costo[-1],
+        "paridad_vqe": historial_paridad[-1],
+        "paridad_objetivo": paridad_objetivo,
+        "peso_paridad": peso_paridad,
+        "penalizacion_paridad": peso_paridad
+        * (1 - paridad_objetivo * historial_paridad[-1]) / 2,
+        "semilla": seed,
         "parametros_optimos": parametros,
         "historial": np.asarray(historial),
+        "historial_costo": np.asarray(historial_costo),
+        "historial_paridad": np.asarray(historial_paridad),
         "estado_vqe": np.asarray(circuito_estado(parametros)),
         "hamiltoniano": H,
         "circuito_energia": circuito_energia,
+        "circuito_costo": circuito_costo,
         "circuito_estado": circuito_estado,
         "pasos_realizados": len(historial) - 1,
+        "motivo_parada": motivo_parada,
     }
 
     if calcular_exacto and n_qubits <= 12:
@@ -910,8 +989,10 @@ def mejor_vqe_ising(
     learning_rate: float = 0.03,
     max_steps: int = 800,
     seeds: tuple[int, ...] = (3, 7, 11, 19, 42),
+    paridad_objetivo: int = 1,
+    peso_paridad: float = 1.0,
 ):
-    """Ejecuta varios reinicios y conserva el VQE de menor energía."""
+    """Ejecuta varios reinicios y conserva el VQE de menor costo penalizado."""
     mejor_resultado = None
 
     for seed in seeds:
@@ -927,11 +1008,13 @@ def mejor_vqe_ising(
             seed=seed,
             mostrar_cada=max_steps + 1,
             calcular_exacto=False,
+            paridad_objetivo=paridad_objetivo,
+            peso_paridad=peso_paridad,
         )
 
         if (
             mejor_resultado is None
-            or resultado["energia_vqe"] < mejor_resultado["energia_vqe"]
+            or resultado["costo_vqe"] < mejor_resultado["costo_vqe"]
         ):
             mejor_resultado = resultado
 
@@ -946,6 +1029,8 @@ def comparar_vqe_tfim(
     learning_rate: float = 0.03,
     max_steps: int = 800,
     seeds: tuple[int, ...] = (3, 7, 11, 19, 42),
+    paridad_objetivo: int = 1,
+    peso_paridad: float = 1.0,
 ):
     """Compara VQE y diagonalización exacta para varios campos."""
     try:
@@ -971,6 +1056,8 @@ def comparar_vqe_tfim(
             learning_rate=learning_rate,
             max_steps=max_steps,
             seeds=seeds,
+            paridad_objetivo=paridad_objetivo,
+            peso_paridad=peso_paridad,
         )
         H = resultado_vqe["hamiltoniano"]
         estado_vqe = np.asarray(resultado_vqe["estado_vqe"], dtype=complex)
@@ -985,6 +1072,11 @@ def comparar_vqe_tfim(
             "h/J": h / J,
             "E_VQE": energia_vqe,
             "E_exacta": energia_exacta,
+            "costo": resultado_vqe["costo_vqe"],
+            "paridad_VQE": resultado_vqe["paridad_vqe"],
+            "peso_sector_incorrecto": (
+                1 - paridad_objetivo * resultado_vqe["paridad_vqe"]
+            ) / 2,
             "error_E": abs(energia_vqe - energia_exacta),
             "fidelidad": fidelidad,
             "Mz_VQE": obs_vqe["Mz"],
@@ -1230,6 +1322,8 @@ def barrido_vqe_tfim_unico(
     learning_rate: float = 0.04,
     max_steps: int = 500,
     seed: int = 17,
+    paridad_objetivo: int = 1,
+    peso_paridad: float = 1.0,
 ) -> tuple[list[dict], dict]:
     """Ejecuta exactamente un VQE de 6 espines por cada valor de h/J."""
     n_qubits = 6
@@ -1259,6 +1353,8 @@ def barrido_vqe_tfim_unico(
             calcular_exacto=False,
             parametros_iniciales=parametros_iniciales,
             verbose=False,
+            paridad_objetivo=paridad_objetivo,
+            peso_paridad=peso_paridad,
         )
         qml, _ = _dependencias_vqe()
         matriz_h = np.asarray(
@@ -1284,6 +1380,11 @@ def barrido_vqe_tfim_unico(
             "h/J": float(razon),
             "E_VQE/N": resultado["energia_vqe"] / n_qubits,
             "E_ED/N": energia_exacta / n_qubits,
+            "costo": resultado["costo_vqe"],
+            "paridad_VQE": resultado["paridad_vqe"],
+            "peso_sector_incorrecto": (
+                1 - paridad_objetivo * resultado["paridad_vqe"]
+            ) / 2,
             "error_E": abs(resultado["energia_vqe"] - energia_exacta),
             "error_E_por_spin": abs(
                 resultado["energia_vqe"] - energia_exacta

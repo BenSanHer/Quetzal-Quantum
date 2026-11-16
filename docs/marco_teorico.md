@@ -45,6 +45,16 @@ $$
 
 En estos notebooks se usa un ansatz con rotaciones locales $R_XR_YR_Z$ y anillos de CNOT. El optimizador clásico es Adam.
 
+### Paridad y continuación variacional
+
+Para el TFIM de seis espines se utiliza la paridad global $P=X_0X_1X_2X_3X_4X_5$. Como cada interacción $Z_iZ_{i+1}$ invierte dos signos bajo P y cada término $X_i$ permanece igual, H conmuta con P. El fundamental de la cadena finita con campo positivo está en el sector positivo.
+
+El costo empleado es `L(θ) = ⟨H⟩ + λ(1 − ⟨P⟩)/2`, con λ=J=1. La penalización equivale al peso del sector negativo multiplicado por λ. La energía física se informa separadamente del costo.
+
+La propuesta de Benjamín Sánchez Hernández fue reutilizar los parámetros finales de un campo como inicio del siguiente. Esta continuación variacional aprovecha la cercanía de los fundamentales vecinos sin modificar el ansatz. Adam se reinicia al cambiar de campo y conserva sus momentos entre bloques del mismo entrenamiento.
+
+En la validación de seis espines se revisa cada 100 pasos si la fidelidad con ED supera 0.99. También se admite una parada por estancamiento: cambios absolutos menores que 1e-4 tanto en fidelidad como en pérdida media durante dos comparaciones consecutivas. El objetivo de fidelidad se distingue de una convergencia estricta por gradiente o variación de energía. La [bitácora del 15 de noviembre de 2026](../reports/bitacora_tfim_2026-11-15.md) registra el experimento y sus resultados.
+
 ## Fermi-Hubbard
 
 El modelo de Fermi-Hubbard describe fermiones que saltan entre sitios y pagan una energía $U$ al ocupar doblemente un sitio:

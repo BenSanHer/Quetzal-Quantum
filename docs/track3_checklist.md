@@ -17,6 +17,9 @@ Basado en `docs/Track3.pdf`.
 ## Extensiones opcionales
 
 - [x] VQE para estimar energía fundamental del TFIM.
+- [x] Penalización de paridad y continuación variacional con objetivo de fidelidad superior al 99 %.
+- [x] Resultados, estados y parámetros guardados con procedencia por campo.
+- [x] Bitácora experimental del 15 de noviembre de 2026 como complemento del informe original.
 - [x] Fermi-Hubbard pequeño con diagonalización exacta.
 - [x] Trotterización de Fermi-Hubbard.
 - [x] Observables de Fermi-Hubbard: doble ocupación, densidad y $S(\pi)$.
@@ -32,7 +35,7 @@ Basado en `docs/Track3.pdf`.
 - [x] Notebooks separados.
 - [x] Código modular en `src/`.
 - [x] Marco teórico.
-- [ ] Informe técnico final en PDF.
+- [x] Informe técnico de la entrega original en PDF; actualización VQE en [la bitácora](../reports/bitacora_tfim_2026-11-15.md) y el informe Markdown.
 - [ ] Presentación de 5 minutos.
 - [ ] Declaración final de SDK menor o igual a 200 palabras.
 

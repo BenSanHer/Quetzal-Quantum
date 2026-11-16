@@ -20,7 +20,7 @@ ODS: **7, 9, 12 y 13**. La conexión física es que una mejor simulación de mat
 
 ## Informe técnico
 
-El informe técnico final en PDF se encuentra en [`reports/informe_tecnico_track_3.pdf`](reports/informe_tecnico_track_3.pdf).
+El informe de la entrega original se encuentra en [`reports/informe_tecnico_track_3.pdf`](reports/informe_tecnico_track_3.pdf). La actualización de los VQE del **15 de noviembre de 2026**, que complementa ese PDF, está documentada en [la bitácora experimental](reports/bitacora_tfim_2026-11-15.md) y en [el informe Markdown actualizado](reports/informe_tecnico_borrador.md).
 
 ## Estructura del repositorio
 
@@ -136,7 +136,54 @@ Resultados de referencia obtenidos en los notebooks fuente:
 | ED $N=6$, $h/J=1.0$ | $E_0/N=-1.287901$, $\sqrt{\langle M_z^2\rangle}=0.813220$. |
 | ED $N=6$, $h/J=2.0$ | $E_0/N=-2.128232$, $\sqrt{\langle M_z^2\rangle}=0.554173$. |
 
-El VQE del TFIM queda escrito como extensión opcional siguiendo el protocolo original: $N=4$, dos semillas por campo y selección del resultado de menor energía.
+### VQE: resultados consolidados al 15 de noviembre de 2026
+
+Los diez campos estudiados tienen un resultado guardado con **fidelidad superior al 99 %** frente al fundamental de diagonalización exacta. La fidelidad es el solapamiento al cuadrado entre ambos estados.
+
+| h/J | Fidelidad final | Paridad | Error absoluto de energía | Pasos del resultado | Inicio |
+|---:|---:|---:|---:|---:|:--|
+| 0.2 | 0.999788 | 0.999857 | 0.001008 | 800 | semilla 3; dos reinicios |
+| 0.4 | 0.998895 | 0.999972 | 0.003997 | 800 | semilla 42; dos reinicios |
+| 0.6 | 0.998948 | 0.999992 | 0.005217 | 800 | semilla 42; dos reinicios |
+| 0.8 | 0.998505 | 0.999981 | 0.009777 | 800 | parámetros de 0.6 |
+| 1.0 | 0.997967 | 0.999999 | 0.014043 | 100 | parámetros de 0.8 |
+| 1.2 | 0.998219 | 0.999999 | 0.012284 | 100 | parámetros de 1.0 |
+| 1.4 | 0.998818 | 1.000000 | 0.008603 | 100 | parámetros de 1.2 |
+| 1.6 | 0.999274 | 1.000000 | 0.005686 | 100 | parámetros de 1.4 |
+| 1.8 | 0.999561 | 1.000000 | 0.003768 | 100 | parámetros de 1.6 |
+| 2.0 | 0.999728 | 1.000000 | 0.002562 | 100 | parámetros de 1.8 |
+
+La tabla reúne tres ejecuciones: reinicios independientes con dos semillas en 0.2, 0.4 y 0.6; la prueba puntual 0.6 → 0.8 con 800 pasos; y la continuación adaptativa 0.8 → 1.0 → … → 2.0. Los pasos corresponden al entrenamiento del resultado seleccionado de cada campo. Las cifras completas y su procedencia están en [`reports/tfim_vqe_resultados_finales.csv`](reports/tfim_vqe_resultados_finales.csv).
+
+### Qué cambió y por qué
+
+El costo incorpora paridad positiva: `L(θ) = ⟨H⟩ + λ(1 − ⟨P⟩)/2`, con `P = X₀X₁X₂X₃X₄X₅` y `λ = J = 1`. Se mantuvieron seis espines, tres capas de rotaciones RX/RY/RZ y anillos de CNOT, y Adam con tasa 0.03.
+
+**Benjamín Sánchez Hernández propuso reutilizar los parámetros optimizados de un campo como inicio del siguiente**, aprovechando la cercanía entre fundamentales vecinos y el cambio suave del TFIM de seis espines. En la prueba 0.6 → 0.8, la fidelidad mejoró de **0.655755 a 0.998505** con el mismo circuito y costo.
+
+Después se aplicó su criterio práctico: buscar fidelidad superior al 99 %, revisar cada 100 pasos y detener también los entrenamientos estancados para continuar el barrido. El estancamiento se implementó como cambios absolutos menores que 0.0001 en fidelidad y en pérdida media durante dos comparaciones de bloque consecutivas. El máximo se fijó en 800 pasos por campo. Adam conserva sus momentos entre bloques y se reinicia al cambiar de campo.
+
+**Los seis campos de 1.0 a 2.0 superaron el objetivo en el primer bloque: 100 pasos cada uno, 600 en total.** Imponer 800 por campo habría requerido 4800 pasos para ese mismo tramo. Ningún caso necesitó detenerse por estancamiento. La referencia exacta se utiliza para evaluar la fidelidad y la parada de este benchmark de seis espines; el objetivo optimizado sigue siendo energía más penalización.
+
+![Comparación de fidelidad, paridad y pasos](figures/tfim_vqe_continuacion_adaptativa.png)
+
+La bitácora conserva los ensayos anteriores: la penalización por sí sola dejó campos medios con fidelidad baja, y duplicar de 800 a 1600 pasos en campos altos no produjo una mejora apreciable. Esto distingue la precisión del estado de la convergencia numérica estricta del optimizador.
+
+### Reproducción y trazabilidad
+
+```bash
+python scripts/continuar_tfim_adaptativo.py
+python scripts/generar_resumen_tfim.py
+python -m unittest discover -s tests -v
+```
+
+El primer comando utiliza el resultado local de 0.8 y repite la continuación adaptativa. En un clon nuevo, ejecutar primero las celdas de importación y parámetros, el barrido VQE de la sección 5 y la prueba puntual 0.6 → 0.8 de la sección 7 del notebook principal. Esas celdas generan los archivos NPZ que consumen los scripts. El repositorio publica código, tablas CSV y figuras; los archivos NPZ con estados, parámetros e historiales se generan y conservan localmente.
+
+- [Bitácora y complemento del informe, 2026-11-15](reports/bitacora_tfim_2026-11-15.md): hipótesis, decisiones, ensayos y alcance.
+- [Continuación adaptativa](reports/tfim_vqe_continuacion_adaptativa.csv) y [revisiones por bloque](reports/tfim_vqe_continuacion_adaptativa/bloques.csv).
+- [Prueba puntual 0.6 → 0.8](reports/tfim_vqe_warm_start_08.csv).
+- [Reinicios independientes con penalización](reports/tfim_vqe_paridad.csv) y [comparación 800/1600 pasos](reports/tfim_vqe_convergencia_1600.csv).
+- [Galería de figuras](figures/README.md) y [notebook con ejecuciones y análisis](notebooks/01_tfim_trotter_ed_vqe.ipynb).
 
 ## Fermi-Hubbard opcional
 
